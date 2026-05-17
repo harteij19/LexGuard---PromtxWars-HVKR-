@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequire } from 'node:module';
 import { analyzeContract } from '@/lib/gemini';
 import type { AnalysisResult } from '@/types';
 
 export const runtime = 'nodejs';
+
+const require = createRequire(import.meta.url);
 
 const riskWeights = {
   HIGH: 80,
@@ -198,11 +201,7 @@ const buildDeterministicResult = (contractText: string, documentName: string): A
 };
 
 const extractPdfText = async (buffer: Buffer) => {
-  const pdfParseModule = await import('pdf-parse');
-  const pdfParse = (pdfParseModule as unknown as { default?: unknown }).default ?? pdfParseModule;
-  if (typeof pdfParse !== 'function') {
-    throw new TypeError('pdf-parse module did not export a function');
-  }
+  const pdfParse = require('pdf-parse') as (dataBuffer: Buffer) => Promise<{ text?: string }>;
   const pdfData = await pdfParse(buffer);
   return pdfData?.text || '';
 };
