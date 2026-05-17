@@ -119,6 +119,27 @@ const buildSummary = (clauses: { riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' }[]) => {
   return `Grounded analysis detected ${clauses.length} clause(s): ${high} high, ${med} medium, ${low} low. Review the high and medium risk clauses before signing.`;
 };
 
+const extractPdfText = async (buffer: Buffer) => {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = '';
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer), disableWorker: true });
+  const doc = await loadingTask.promise;
+  let text = '';
+
+  for (let i = 1; i <= doc.numPages; i += 1) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items
+      .map((item: { str?: string }) => item.str || '')
+      .join(' ');
+    text += `${pageText}\n`;
+    page.cleanup();
+  }
+
+  await doc.destroy();
+  return text;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -138,12 +159,8 @@ export async function POST(request: NextRequest) {
 
       if (isPdf) {
         try {
-          const { PDFParse } = await import('pdf-parse');
           const buffer = Buffer.from(await file.arrayBuffer());
-          const parser = new PDFParse({ data: buffer });
-          const pdfData = await parser.getText();
-          contractText = pdfData.text;
-          await parser.destroy();
+          contractText = await extractPdfText(buffer);
           
           if (!contractText || contractText.trim().length === 0) {
             return NextResponse.json({ error: 'PDF file appears to be empty or could not be read. Please ensure the PDF contains text content.' }, { status: 400 });
