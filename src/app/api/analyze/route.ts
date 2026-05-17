@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequire } from 'node:module';
 import { analyzeContract } from '@/lib/gemini';
 import type { AnalysisResult } from '@/types';
 
 export const runtime = 'nodejs';
+
+const require = createRequire(import.meta.url);
 
 const riskWeights = {
   HIGH: 80,
@@ -197,14 +200,60 @@ const buildDeterministicResult = (contractText: string, documentName: string): A
   };
 };
 
-const extractPdfText = async (buffer: Buffer) => {
-  const pdfParseModule = await import('pdf-parse');
-  const pdfParse = (pdfParseModule as unknown as { default?: unknown }).default ?? pdfParseModule;
-  if (typeof pdfParse !== 'function') {
-    throw new TypeError('pdf-parse module did not export a function');
+const extractTextWithPdfJs = async (buffer: Buffer) => {
+  const pdfJs = require('pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js') as {
+    disableWorker?: boolean;
+    getDocument: (data: Buffer) => { promise?: Promise<{ numPages: number; getPage: (pageNumber: number) => Promise<{ getTextContent: (options?: { normalizeWhitespace?: boolean; disableCombineTextItems?: boolean }) => Promise<{ items: Array<{ str?: string; transform?: number[] }> }> }> }> };
+  };
+
+  pdfJs.disableWorker = true;
+  const loadingTask = pdfJs.getDocument(buffer);
+  const doc = await (loadingTask.promise ?? (loadingTask as unknown as Promise<{ numPages: number; getPage: (pageNumber: number) => Promise<{ getTextContent: (options?: { normalizeWhitespace?: boolean; disableCombineTextItems?: boolean }) => Promise<{ items: Array<{ str?: string; transform?: number[] }> }> }> }>));
+
+  const pages: string[] = [];
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+    const page = await doc.getPage(pageNumber);
+    const content = await page.getTextContent({ normalizeWhitespace: true, disableCombineTextItems: false });
+    const pageText = content.items.map(item => item?.str || '').join(' ').trim();
+    if (pageText) pages.push(pageText);
   }
-  const pdfData = await pdfParse(buffer);
-  return pdfData?.text || '';
+
+  return pages.join('\n\n').trim();
+};
+
+const extractPdfText = async (buffer: Buffer) => {
+  const errors: string[] = [];
+
+  const tryParse = async (label: string, parser: (dataBuffer: Buffer, options?: { max?: number }) => Promise<{ text?: string }>) => {
+    try {
+      const pdfData = await parser(buffer, { max: 0 });
+      const text = pdfData?.text?.trim() || '';
+      if (text) return text;
+      errors.push(`${label}: parsed but returned empty text`);
+      return '';
+    } catch (error) {
+      errors.push(`${label}: ${(error as Error)?.message || 'unknown parse error'}`);
+      return '';
+    }
+  };
+
+  const directParser = require('pdf-parse/lib/pdf-parse.js') as (dataBuffer: Buffer, options?: { max?: number }) => Promise<{ text?: string }>;
+  const directText = await tryParse('pdf-parse/lib/pdf-parse.js', directParser);
+  if (directText) return directText;
+
+  const packageParser = require('pdf-parse') as (dataBuffer: Buffer, options?: { max?: number }) => Promise<{ text?: string }>;
+  const packageText = await tryParse('pdf-parse', packageParser);
+  if (packageText) return packageText;
+
+  try {
+    const pdfJsText = await extractTextWithPdfJs(buffer);
+    if (pdfJsText) return pdfJsText;
+    errors.push('pdfjs fallback: parsed but returned empty text');
+  } catch (error) {
+    errors.push(`pdfjs fallback: ${(error as Error)?.message || 'unknown parse error'}`);
+  }
+
+  throw new Error(`Unable to extract text from PDF. ${errors.join(' | ')}`);
 };
 
 export async function POST(request: NextRequest) {
@@ -234,7 +283,7 @@ export async function POST(request: NextRequest) {
           }
         } catch (pdfError) {
           console.error('PDF parsing error:', pdfError);
-          return NextResponse.json({ error: 'Failed to parse PDF file. Please ensure it\'s a valid PDF document.' }, { status: 400 });
+          return NextResponse.json({ error: 'Failed to extract readable text from PDF. If this is a scanned/image PDF, please upload DOCX/TXT or paste text.' }, { status: 400 });
         }
       } else if (isDocx) {
         try {
@@ -286,12 +335,8 @@ export async function POST(request: NextRequest) {
     try {
       aiResponse = await analyzeContract(contractText);
     } catch (apiError) {
-      console.error('Gemini API call failed, falling back to mock data:', apiError);
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.error('Gemini API call failed, falling back to deterministic data:', apiError);
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
@@ -306,12 +351,8 @@ export async function POST(request: NextRequest) {
         parsed = JSON.parse(aiResponse);
       }
     } catch {
-      console.error('Failed to parse AI response, using mock data');
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.error('Failed to parse AI response, using deterministic data');
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
