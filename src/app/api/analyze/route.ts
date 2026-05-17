@@ -200,10 +200,60 @@ const buildDeterministicResult = (contractText: string, documentName: string): A
   };
 };
 
+const extractTextWithPdfJs = async (buffer: Buffer) => {
+  const pdfJs = require('pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js') as {
+    disableWorker?: boolean;
+    getDocument: (data: Buffer) => { promise?: Promise<{ numPages: number; getPage: (pageNumber: number) => Promise<{ getTextContent: (options?: { normalizeWhitespace?: boolean; disableCombineTextItems?: boolean }) => Promise<{ items: Array<{ str?: string; transform?: number[] }> }> }> }> };
+  };
+
+  pdfJs.disableWorker = true;
+  const loadingTask = pdfJs.getDocument(buffer);
+  const doc = await (loadingTask.promise ?? (loadingTask as unknown as Promise<{ numPages: number; getPage: (pageNumber: number) => Promise<{ getTextContent: (options?: { normalizeWhitespace?: boolean; disableCombineTextItems?: boolean }) => Promise<{ items: Array<{ str?: string; transform?: number[] }> }> }> }>));
+
+  const pages: string[] = [];
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+    const page = await doc.getPage(pageNumber);
+    const content = await page.getTextContent({ normalizeWhitespace: true, disableCombineTextItems: false });
+    const pageText = content.items.map(item => item?.str || '').join(' ').trim();
+    if (pageText) pages.push(pageText);
+  }
+
+  return pages.join('\n\n').trim();
+};
+
 const extractPdfText = async (buffer: Buffer) => {
-  const pdfParse = require('pdf-parse') as (dataBuffer: Buffer) => Promise<{ text?: string }>;
-  const pdfData = await pdfParse(buffer);
-  return pdfData?.text || '';
+  const errors: string[] = [];
+
+  const tryParse = async (label: string, parser: (dataBuffer: Buffer, options?: { max?: number }) => Promise<{ text?: string }>) => {
+    try {
+      const pdfData = await parser(buffer, { max: 0 });
+      const text = pdfData?.text?.trim() || '';
+      if (text) return text;
+      errors.push(`${label}: parsed but returned empty text`);
+      return '';
+    } catch (error) {
+      errors.push(`${label}: ${(error as Error)?.message || 'unknown parse error'}`);
+      return '';
+    }
+  };
+
+  const directParser = require('pdf-parse/lib/pdf-parse.js') as (dataBuffer: Buffer, options?: { max?: number }) => Promise<{ text?: string }>;
+  const directText = await tryParse('pdf-parse/lib/pdf-parse.js', directParser);
+  if (directText) return directText;
+
+  const packageParser = require('pdf-parse') as (dataBuffer: Buffer, options?: { max?: number }) => Promise<{ text?: string }>;
+  const packageText = await tryParse('pdf-parse', packageParser);
+  if (packageText) return packageText;
+
+  try {
+    const pdfJsText = await extractTextWithPdfJs(buffer);
+    if (pdfJsText) return pdfJsText;
+    errors.push('pdfjs fallback: parsed but returned empty text');
+  } catch (error) {
+    errors.push(`pdfjs fallback: ${(error as Error)?.message || 'unknown parse error'}`);
+  }
+
+  throw new Error(`Unable to extract text from PDF. ${errors.join(' | ')}`);
 };
 
 export async function POST(request: NextRequest) {
@@ -233,7 +283,7 @@ export async function POST(request: NextRequest) {
           }
         } catch (pdfError) {
           console.error('PDF parsing error:', pdfError);
-          return NextResponse.json({ error: 'Failed to parse PDF file. Please ensure it\'s a valid PDF document.' }, { status: 400 });
+          return NextResponse.json({ error: 'Failed to extract readable text from PDF. If this is a scanned/image PDF, please upload DOCX/TXT or paste text.' }, { status: 400 });
         }
       } else if (isDocx) {
         try {
