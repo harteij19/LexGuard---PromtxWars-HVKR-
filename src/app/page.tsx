@@ -96,8 +96,16 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             {/* Hero Section */}
-            <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 pt-16">
+            <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 pt-16 overflow-hidden">
               
+              {/* Cinematic Background Elements for Hero */}
+              <div className="cinematic-bg-container">
+                <div className="cinematic-bg-image" />
+                <div className="scanlines" />
+                <div className="cinematic-vignette" />
+                <div className="cinematic-gradient-overlay" />
+              </div>
+
               {/* Massive Rotating 3D Element */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -183,10 +191,19 @@ export default function Home() {
               </motion.div>
             </section>
 
-            <LiveStats />
-            <FeatureCards />
+            {/* Features & Stats with lower opacity cinematic background */}
+            <div className="relative z-10 pb-20">
+              <div className="cinematic-bg-container">
+                <div className="cinematic-bg-image cinematic-bg-feature" />
+                <div className="cinematic-gradient-overlay" />
+              </div>
+              <div className="relative z-10">
+                <LiveStats />
+                <FeatureCards />
+              </div>
+            </div>
 
-            <div ref={uploadRef}>
+            <div ref={uploadRef} className="relative z-10">
               <UploadSection onAnalyze={handleAnalyze} isLoading={isLoading} />
             </div>
 
@@ -211,9 +228,13 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="relative z-10 pt-24 pb-24 px-4"
+            className="relative z-10 pt-24 pb-24 px-4 overflow-hidden"
           >
-            <div className="max-w-[1400px] mx-auto">
+            {/* Dashboard specific faint AI grid background */}
+            <div className="dashboard-ai-grid" />
+            <div className="scanlines opacity-5" />
+
+            <div className="max-w-[1400px] mx-auto relative z-10">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-6">
                 <motion.button
                   initial={{ opacity: 0, x: -20 }}

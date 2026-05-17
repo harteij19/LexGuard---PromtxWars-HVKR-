@@ -23,7 +23,7 @@ export default function AnimatedBackground() {
       canvas.height = h;
 
       particles = [];
-      const numParticles = Math.floor((w * h) / 12000); // Dense star-like particles for Sapforce vibe
+      const numParticles = Math.floor((w * h) / 12000); 
       for (let i = 0; i < numParticles; i++) {
         particles.push({
           x: Math.random() * w,
@@ -42,7 +42,7 @@ export default function AnimatedBackground() {
       // Draw massive rotating geometric element
       ctx.save();
       ctx.translate(w / 2, h / 2);
-      rotationAngle += 0.001; // Slow rotation
+      rotationAngle += 0.001; 
       ctx.rotate(rotationAngle);
       
       // Outer dashed ring
@@ -63,13 +63,11 @@ export default function AnimatedBackground() {
         const y = radius * Math.sin(angle);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
-        
-        // Connect to center
         ctx.moveTo(0, 0);
         ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.strokeStyle = 'rgba(197, 248, 82, 0.05)'; // Subtle lime
+      ctx.strokeStyle = 'rgba(197, 248, 82, 0.05)'; 
       ctx.setLineDash([]);
       ctx.stroke();
       
@@ -87,7 +85,7 @@ export default function AnimatedBackground() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(197, 248, 82, ${p.a})`; // Lime green particles
+        ctx.fillStyle = `rgba(197, 248, 82, ${p.a})`; 
         ctx.fill();
       });
 
@@ -106,7 +104,6 @@ export default function AnimatedBackground() {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0">
-      <div className="absolute inset-0 bg-[url('/dimmed-bg.png')] bg-cover bg-center bg-no-repeat opacity-[0.05] mix-blend-screen" />
       <div className="mesh-bg" />
       <div className="grid-overlay" />
       <div className="hero-glow" />
