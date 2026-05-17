@@ -3,6 +3,8 @@ import { analyzeContract } from '@/lib/gemini';
 import { mockAnalysis } from '@/lib/mockData';
 import type { AnalysisResult } from '@/types';
 
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -14,15 +16,55 @@ export async function POST(request: NextRequest) {
 
     if (file) {
       documentName = file.name;
-      if (file.type === 'application/pdf') {
-        // Dynamic import for pdf-parse
-        const pdfParse = (await import('pdf-parse')).default;
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const pdfData = await pdfParse(buffer);
-        contractText = pdfData.text;
-      } else {
+      const fileName = file.name.toLowerCase();
+      const isPdf = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+      const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileName.endsWith('.docx');
+      const isDoc = file.type === 'application/msword' || fileName.endsWith('.doc');
+      const isText = file.type === 'text/plain' || fileName.endsWith('.txt');
+
+      if (isPdf) {
+        try {
+          const { PDFParse } = await import('pdf-parse');
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const parser = new PDFParse({ data: buffer });
+          const pdfData = await parser.getText();
+          contractText = pdfData.text;
+          await parser.destroy();
+          
+          if (!contractText || contractText.trim().length === 0) {
+            return NextResponse.json({ error: 'PDF file appears to be empty or could not be read. Please ensure the PDF contains text content.' }, { status: 400 });
+          }
+        } catch (pdfError) {
+          console.error('PDF parsing error:', pdfError);
+          return NextResponse.json({ error: 'Failed to parse PDF file. Please ensure it\'s a valid PDF document.' }, { status: 400 });
+        }
+      } else if (isDocx) {
+        try {
+          const mammothModule = await import('mammoth');
+          const mammoth = (mammothModule as unknown as { default?: { extractRawText: (arg: { buffer: Buffer }) => Promise<{ value?: string }> } }).default ?? mammothModule;
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const docxData = await mammoth.extractRawText({ buffer });
+          contractText = docxData?.value ?? '';
+
+          if (!contractText || contractText.trim().length === 0) {
+            return NextResponse.json({ error: 'DOCX file appears to be empty or could not be read. Please ensure the document contains text content.' }, { status: 400 });
+          }
+        } catch (docxError) {
+          console.error('DOCX parsing error:', docxError);
+          return NextResponse.json({ error: 'Failed to parse DOCX file. Please ensure it\'s a valid DOCX document.' }, { status: 400 });
+        }
+      } else if (isDoc) {
+        return NextResponse.json({ error: 'Legacy .doc files are not supported. Please upload a .docx, .pdf, or .txt file.' }, { status: 400 });
+      } else if (isText) {
         // Plain text file
-        contractText = await file.text();
+        try {
+          contractText = await file.text();
+        } catch (textError) {
+          console.error('Text file reading error:', textError);
+          return NextResponse.json({ error: 'Failed to read text file.' }, { status: 400 });
+        }
+      } else {
+        return NextResponse.json({ error: 'Unsupported file type. Please upload a PDF, DOCX, or TXT file.' }, { status: 400 });
       }
     } else if (text) {
       contractText = text;
@@ -110,6 +152,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ result, contractText });
   } catch (error) {
     console.error('Analysis error:', error);
-    return NextResponse.json({ error: 'Failed to analyze document' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to analyze document. Please try again.' }, { status: 500 });
   }
 }

@@ -69,7 +69,7 @@ export default function UploadSection({ onAnalyze, isLoading }: UploadSectionPro
               ${dragActive ? 'border-[#C5F852] bg-[#C5F852]/5' : 'border-white/[0.1] bg-[#141414] hover:border-white/[0.2] hover:bg-[#1A1A1A]'}
             `}
           >
-            <input type="file" accept=".pdf,.txt" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+            <input type="file" accept=".pdf,.docx,.doc,.txt" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
             
             <AnimatePresence mode="wait">
               {file ? (
@@ -89,7 +89,7 @@ export default function UploadSection({ onAnalyze, isLoading }: UploadSectionPro
                     <Upload className="w-8 h-8 text-[#C5F852]" />
                   </div>
                   <p className="text-white font-bold text-lg mb-2" style={{ fontFamily: 'Space Grotesk' }}>Drag & Drop Document</p>
-                  <p className="text-gray-500 text-sm mb-6 font-medium">Supports PDF, TXT</p>
+                  <p className="text-gray-500 text-sm mb-6 font-medium">Supports PDF, DOCX, TXT</p>
                   <div className="btn-secondary pointer-events-none uppercase text-sm tracking-wide">Browse Files</div>
                 </motion.div>
               )}

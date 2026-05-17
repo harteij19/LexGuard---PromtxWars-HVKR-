@@ -53,17 +53,26 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        throw new Error('Analysis failed');
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Analysis failed');
       }
 
       const data = await res.json();
+      
+      if (!data.result) {
+        throw new Error('Invalid response format from server');
+      }
+      
       setAnalysis(data.result);
-      setContractText(data.contractText);
+      setContractText(data.contractText || '');
+      setIsLoading(false);
+      setView('dashboard');
     } catch (error) {
       console.error('Analysis error:', error);
+      setIsLoading(false);
+      setView('landing');
+      alert('Error: ' + (error instanceof Error ? error.message : 'Failed to analyze document. Please try again.'));
     }
-
-    setIsLoading(false);
   };
 
   const handleProcessingComplete = () => {
