@@ -3,81 +3,116 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function analyzeContract(contractText: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ 
+  const model = genAI.getGenerativeModel({
     model: 'gemini-1.5-flash',
     generationConfig: {
-      temperature: 0.1, // Highly deterministic for maximum accuracy
-      topP: 0.8,
-      topK: 40,
+      temperature: 0.1,
+      topP: 0.7,
+      topK: 20,
     }
   });
 
-  const prompt = `You are LEXGUARD, an elite, highly precise AI contract intelligence system used by top-tier law firms.
-Your objective is to provide a 100% accurate, flawless legal risk analysis of the provided document.
+  const rules = `IMPORTANT RULES:
+1. ONLY analyze information explicitly present in the uploaded contract.
+2. NEVER invent durations, compensation terms, geographic restrictions, legal obligations, benefits, policies, or clauses.
+3. Every risk must be tied to an exact quoted clause and direct implications only.
+4. If information is missing, return: "NO SIGNIFICANT CLAUSE DETECTED".
+5. DO NOT use generic legal assumptions.
+6. DO NOT create hypothetical clauses.
+7. If uncertain, say: "Insufficient information in the contract."
+8. Preserve factual accuracy over creativity.
+9. Every explanation must be source-grounded.
+10. Never merge unrelated clauses together.`;
+
+  const stage1Prompt = `You are LEXGUARD. Stage 1: clause extraction.
+Extract ONLY clauses that exist in the document. Do NOT summarize.
 
 DOCUMENT TEXT:
 ---
 ${contractText}
 ---
 
-You MUST respond with ONLY valid JSON (no markdown, no code blocks, no explanation outside JSON) in this exact format:
+${rules}
+
+Return ONLY valid JSON in this format:
 {
-  "overallRisk": <number 0-100, calculated strictly based on sum of risks>,
-  "verdict": "<SAFE|CAUTION|DANGEROUS>",
-  "summary": "<2-3 sentence executive summary of critical liabilities>",
   "clauses": [
     {
-      "risk": "<HIGH|MEDIUM|LOW>",
-      "title": "<short descriptive title>",
-      "clause": "<EXACT QUOTE from the document text - MUST be verbatim>",
-      "explanation": "<detailed, legally accurate explanation of the risk>",
-      "simpleExplanation": "<plain English translation without jargon>",
-      "suggestion": "<highly actionable, specific negotiation tactic>",
-      "agentSource": "<Legal|Financial|Privacy|Employment>",
-      "confidence": <number 90-99, representing certainty of risk>
+      "id": "clause-1",
+      "clauseType": "<Non-Compete|Termination|IP|Arbitration|Monitoring|Compensation|Benefits|Confidentiality|Other>",
+      "section": "<Section title from the document if present>",
+      "riskCategory": "<Employment|Legal|Financial|Privacy>",
+      "originalText": "<EXACT clause text from the document>"
     }
-  ],
-  "agentResults": [
-    { "agentName": "Legal Risk Agent", "riskScore": <0-100>, "findings": <number> },
-    { "agentName": "Financial Risk Agent", "riskScore": <0-100>, "findings": <number> },
-    { "agentName": "Privacy Agent", "riskScore": <0-100>, "findings": <number> },
-    { "agentName": "Employment Risk Agent", "riskScore": <0-100>, "findings": <number> },
-    { "agentName": "Simplifier Agent", "riskScore": 0, "findings": <number> }
-  ],
-  "consequences": [
-    "<specific worst-case scenario 1 if signed>",
-    "<specific worst-case scenario 2 if signed>"
-  ],
-  "trustMetrics": {
-    "transparency": <0-100>,
-    "fairness": <0-100>,
-    "readability": <0-100>,
-    "userSafety": <0-100>
-  },
-  "radarScores": {
-    "financialRisk": <0-100>,
-    "privacyRisk": <0-100>,
-    "hiddenLiability": <0-100>,
-    "terminationRisk": <0-100>,
-    "dataExploitation": <0-100>,
-    "ambiguityScore": <0-100>
-  }
-}
+  ]
+}`;
 
-CRITICAL INSTRUCTIONS FOR MAXIMUM ACCURACY:
-1. NO HALLUCINATIONS: Every "clause" MUST be an exact, verifiable verbatim quote from the provided text.
-2. PRECISION SCORING: Calculate "overallRisk" and "radarScores" using logical deduction based purely on the text severity. 
-3. Do NOT output anything other than raw, valid JSON.`;
+  const stage1 = await model.generateContent(stage1Prompt);
+  const stage1Text = stage1.response.text();
 
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  return response.text();
+  const stage2Prompt = `You are LEXGUARD. Stage 2: risk analysis for extracted clauses ONLY.
+Use the provided clauses. Do NOT invent new details.
+
+EXTRACTED CLAUSES JSON:
+${stage1Text}
+
+${rules}
+
+Return ONLY valid JSON in this format:
+{
+  "clauses": [
+    {
+      "id": "<same id>",
+      "section": "<section title>",
+      "agent": "<Legal|Financial|Privacy|Employment>",
+      "riskLevel": "<LOW|MEDIUM|HIGH>",
+      "confidence": <0-100>,
+      "originalClause": "<EXACT clause text, unchanged>",
+      "riskReason": "<direct implication grounded in the clause>",
+      "sourceGrounded": true
+    }
+  ]
+}`;
+
+  const stage2 = await model.generateContent(stage2Prompt);
+  const stage2Text = stage2.response.text();
+
+  const stage3Prompt = `You are LEXGUARD. Stage 3: human explanation and negotiation advice.
+Only use the provided clauses. Do NOT add details.
+
+ANALYZED CLAUSES JSON:
+${stage2Text}
+
+${rules}
+
+Return ONLY valid JSON in this exact format:
+{
+  "overallRiskScore": <number 0-100>,
+  "verdict": "SAFE" | "CAUTION" | "DANGEROUS",
+  "clauses": [
+    {
+      "id": "<same id>",
+      "section": "<section title>",
+      "agent": "<Legal|Financial|Privacy|Employment>",
+      "riskLevel": "<LOW|MEDIUM|HIGH>",
+      "confidence": <0-100>,
+      "originalClause": "<EXACT clause text, unchanged>",
+      "riskReason": "<direct implication grounded in the clause>",
+      "simpleExplanation": "<plain English explanation based only on the clause>",
+      "negotiationAdvice": "<actionable advice based only on the clause>",
+      "sourceGrounded": true
+    }
+  ]
+}`;
+
+  const stage3 = await model.generateContent(stage3Prompt);
+  return stage3.response.text();
 }
 
 export async function chatAboutContract(contractText: string, question: string, chatHistory: { role: string; content: string }[]): Promise<string> {
   const model = genAI.getGenerativeModel({ 
     model: 'gemini-1.5-flash',
-    generationConfig: { temperature: 0.2 } // High precision for chat
+    generationConfig: { temperature: 0.2 }
   });
 
   const historyContext = chatHistory
@@ -85,7 +120,7 @@ export async function chatAboutContract(contractText: string, question: string, 
     .map(msg => `${msg.role === 'user' ? 'User' : 'LEXGUARD'}: ${msg.content}`)
     .join('\n');
 
-  const prompt = `You are LEXGUARD AI, an elite legal advisor. 
+  const prompt = `You are LEXGUARD AI, an elite legal advisor.
 You provide extremely precise, accurate, and professional advice based ONLY on the provided document.
 
 DOCUMENT:
@@ -101,7 +136,8 @@ QUESTION: ${question}
 RULES:
 - Be extremely precise. If a clause exists, quote it verbatim.
 - Do not hallucinate legal terms not present in the document.
-- Be concise, professional, and brutally honest about risks.
+- If information is missing, say: "Insufficient information in the contract."
+- Be concise, professional, and honest about risks.
 - Do NOT use markdown formatting. Use plain text.`;
 
   const result = await model.generateContent(prompt);

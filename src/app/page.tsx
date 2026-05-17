@@ -283,7 +283,11 @@ export default function Home() {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div className="glass-card p-10 flex flex-col items-center justify-center relative">
-                  <RiskScore score={analysis.overallRisk} verdict={analysis.verdict} confidence={analysis.clauses[0]?.confidence || 98} />
+                  <RiskScore
+                    score={analysis.overallRiskScore}
+                    verdict={analysis.verdict}
+                    confidence={analysis.clauses.length ? Math.round(analysis.clauses.reduce((sum, c) => sum + c.confidence, 0) / analysis.clauses.length) : 98}
+                  />
                 </div>
                 <DangerRadar scores={analysis.radarScores || { financialRisk: 50, privacyRisk: 50, hiddenLiability: 50, terminationRisk: 50, dataExploitation: 50, ambiguityScore: 50 }} />
                 <TrustMetrics metrics={analysis.trustMetrics || { transparency: 50, fairness: 50, readability: 50, userSafety: 50 }} />
@@ -299,9 +303,9 @@ export default function Home() {
 
                     <div className="space-y-5">
                       {[
-                        { label: 'High Risk', count: analysis.clauses.filter(c => c.risk === 'HIGH').length, color: 'bg-[#FF4A4A]', textColor: 'text-[#FF4A4A]' },
-                        { label: 'Medium Risk', count: analysis.clauses.filter(c => c.risk === 'MEDIUM').length, color: 'bg-[#FFB020]', textColor: 'text-[#FFB020]' },
-                        { label: 'Low Risk', count: analysis.clauses.filter(c => c.risk === 'LOW').length, color: 'bg-[#C5F852]', textColor: 'text-[#C5F852]' },
+                        { label: 'High Risk', count: analysis.clauses.filter(c => c.riskLevel === 'HIGH').length, color: 'bg-[#FF4A4A]', textColor: 'text-[#FF4A4A]' },
+                        { label: 'Medium Risk', count: analysis.clauses.filter(c => c.riskLevel === 'MEDIUM').length, color: 'bg-[#FFB020]', textColor: 'text-[#FFB020]' },
+                        { label: 'Low Risk', count: analysis.clauses.filter(c => c.riskLevel === 'LOW').length, color: 'bg-[#C5F852]', textColor: 'text-[#C5F852]' },
                       ].map(item => (
                         <div key={item.label} className="flex items-center gap-4">
                           <span className={`text-sm ${item.textColor} font-bold w-24 uppercase tracking-wide`} style={{ fontFamily: 'Space Grotesk' }}>{item.label}</span>

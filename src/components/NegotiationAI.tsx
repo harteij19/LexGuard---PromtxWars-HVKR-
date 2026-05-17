@@ -20,15 +20,15 @@ export default function NegotiationAI({ clauses }: NegotiationAIProps) {
     
     // Simulate generation for demo since we already have the suggestions
     setTimeout(() => {
-      const highRisks = clauses.filter(c => c.risk === 'HIGH');
-      const medRisks = clauses.filter(c => c.risk === 'MEDIUM');
+      const highRisks = clauses.filter(c => c.riskLevel === 'HIGH');
+      const medRisks = clauses.filter(c => c.riskLevel === 'MEDIUM');
       
       let draft = `Dear [Counterparty Name],\n\nThank you for sending over the agreement. I am excited to move forward, but after a review of the document, I have a few points I would like to negotiate to ensure a fair and balanced arrangement for both parties.\n\n`;
       
       if (highRisks.length > 0) {
         draft += `CRITICAL CONCERNS:\n`;
         highRisks.forEach((r, i) => {
-          draft += `${i + 1}. Regarding "${r.title}": ${r.suggestion}\n`;
+          draft += `${i + 1}. Regarding "${r.section}": ${r.negotiationAdvice}\n`;
         });
         draft += '\n';
       }
@@ -36,7 +36,7 @@ export default function NegotiationAI({ clauses }: NegotiationAIProps) {
       if (medRisks.length > 0) {
         draft += `POINTS FOR CLARIFICATION:\n`;
         medRisks.slice(0, 2).forEach((r, i) => {
-          draft += `${i + 1}. Regarding "${r.title}": ${r.suggestion}\n`;
+          draft += `${i + 1}. Regarding "${r.section}": ${r.negotiationAdvice}\n`;
         });
         draft += '\n';
       }

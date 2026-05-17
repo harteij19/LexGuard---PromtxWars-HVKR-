@@ -28,8 +28,8 @@ export default function VoiceSummary({ analysis }: VoiceSummaryProps) {
       synth.cancel();
       setIsPlaying(false);
     } else {
-      const highRiskCount = analysis.clauses.filter(c => c.risk === 'HIGH').length;
-      let text = `LexGuard Analysis Complete. Overall risk score is ${analysis.overallRisk} out of 100. Verdict: ${analysis.verdict}. `;
+      const highRiskCount = analysis.clauses.filter(c => c.riskLevel === 'HIGH').length;
+      let text = `LexGuard Analysis Complete. Overall risk score is ${analysis.overallRiskScore} out of 100. Verdict: ${analysis.verdict}. `;
       text += `We detected ${highRiskCount} high risk clauses. `;
       text += `Executive summary: ${analysis.summary}`;
 

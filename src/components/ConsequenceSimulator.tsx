@@ -21,7 +21,7 @@ export default function ConsequenceSimulator({ consequences }: ConsequenceSimula
           <h3 className="text-white font-bold text-xl uppercase tracking-wide" style={{ fontFamily: 'Space Grotesk' }}>
             Impact Simulator
           </h3>
-          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">AI Predicted Consequences</p>
+          <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Source-Grounded Impact Signals</p>
         </div>
       </div>
 

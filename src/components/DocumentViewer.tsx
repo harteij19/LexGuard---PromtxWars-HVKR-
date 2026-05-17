@@ -19,11 +19,11 @@ export default function DocumentViewer({ contractText, clauses }: DocumentViewer
     
     // Simple highlight
     clauses.forEach(clause => {
-      if (clause.clause && text.includes(clause.clause)) {
-        const riskClass = clause.risk === 'HIGH' ? 'highlight-high' : clause.risk === 'MEDIUM' ? 'highlight-medium' : 'highlight-low';
+      if (clause.originalClause && text.includes(clause.originalClause)) {
+        const riskClass = clause.riskLevel === 'HIGH' ? 'highlight-high' : clause.riskLevel === 'MEDIUM' ? 'highlight-medium' : 'highlight-low';
         text = text.replace(
-          clause.clause,
-          `<span class="${riskClass}" title="${clause.simpleExplanation}">${clause.clause}</span>`
+          clause.originalClause,
+          `<span class="${riskClass}" title="${clause.simpleExplanation}">${clause.originalClause}</span>`
         );
       }
     });
