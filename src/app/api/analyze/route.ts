@@ -286,12 +286,8 @@ export async function POST(request: NextRequest) {
     try {
       aiResponse = await analyzeContract(contractText);
     } catch (apiError) {
-      console.error('Gemini API call failed, falling back to mock data:', apiError);
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.error('Gemini API call failed, falling back to deterministic data:', apiError);
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
@@ -306,12 +302,8 @@ export async function POST(request: NextRequest) {
         parsed = JSON.parse(aiResponse);
       }
     } catch {
-      console.error('Failed to parse AI response, using mock data');
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.error('Failed to parse AI response, using deterministic data');
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
