@@ -106,6 +106,7 @@ export default function AnimatedBackground() {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0">
+      <div className="absolute inset-0 bg-[url('/dimmed-bg.png')] bg-cover bg-center bg-no-repeat opacity-[0.05] mix-blend-screen" />
       <div className="mesh-bg" />
       <div className="grid-overlay" />
       <div className="hero-glow" />
