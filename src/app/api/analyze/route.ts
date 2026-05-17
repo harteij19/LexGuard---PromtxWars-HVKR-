@@ -120,26 +120,13 @@ const buildSummary = (clauses: { riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' }[]) => {
 };
 
 const extractPdfText = async (buffer: Buffer) => {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  (pdfjs as { GlobalWorkerOptions?: { workerSrc?: string } }).GlobalWorkerOptions =
-    (pdfjs as { GlobalWorkerOptions?: { workerSrc?: string } }).GlobalWorkerOptions || {};
-  (pdfjs as { GlobalWorkerOptions?: { workerSrc?: string } }).GlobalWorkerOptions!.workerSrc = '';
-  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-  const doc = await loadingTask.promise;
-  let text = '';
-
-  for (let i = 1; i <= doc.numPages; i += 1) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ('str' in item && typeof item.str === 'string' ? item.str : ''))
-      .join(' ');
-    text += `${pageText}\n`;
-    page.cleanup();
+  const pdfParseModule = await import('pdf-parse');
+  const pdfParse = (pdfParseModule as unknown as { default?: unknown }).default ?? pdfParseModule;
+  if (typeof pdfParse !== 'function') {
+    throw new TypeError('pdf-parse module did not export a function');
   }
-
-  await doc.destroy();
-  return text;
+  const pdfData = await pdfParse(buffer);
+  return pdfData?.text || '';
 };
 
 export async function POST(request: NextRequest) {
