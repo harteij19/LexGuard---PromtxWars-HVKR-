@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeContract } from '@/lib/gemini';
-import { mockAnalysis } from '@/lib/mockData';
 import type { AnalysisResult } from '@/types';
 
 export const runtime = 'nodejs';
@@ -119,6 +118,85 @@ const buildSummary = (clauses: { riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' }[]) => {
   return `Grounded analysis detected ${clauses.length} clause(s): ${high} high, ${med} medium, ${low} low. Review the high and medium risk clauses before signing.`;
 };
 
+const detectRiskLevel = (text: string) => {
+  const lower = text.toLowerCase();
+  const highSignals = ['terminate', 'termination', 'non-compete', 'arbitration', 'waive', 'indemnify', 'ownership', 'assign', 'liability'];
+  const medSignals = ['monitor', 'privacy', 'audit', 'policy', 'modify', 'notice', 'discretion'];
+  if (highSignals.some(s => lower.includes(s))) return 'HIGH' as const;
+  if (medSignals.some(s => lower.includes(s))) return 'MEDIUM' as const;
+  return 'LOW' as const;
+};
+
+const detectAgent = (text: string) => {
+  const lower = text.toLowerCase();
+  if (lower.includes('privacy') || lower.includes('monitor') || lower.includes('data')) return 'Privacy';
+  if (lower.includes('compensation') || lower.includes('payment') || lower.includes('fee') || lower.includes('price')) return 'Financial';
+  if (lower.includes('employment') || lower.includes('termination') || lower.includes('non-compete')) return 'Employment';
+  return 'Legal';
+};
+
+const extractSections = (text: string) => {
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map(b => b.trim())
+    .filter(Boolean);
+
+  if (!blocks.length) return [] as { section: string; clause: string }[];
+
+  return blocks.map((block, index) => {
+    const lines = block.split(/\n/).map(l => l.trim()).filter(Boolean);
+    const firstLine = lines[0] || '';
+    const section = firstLine.length <= 80 ? firstLine : `Section ${index + 1}`;
+    return { section, clause: block };
+  });
+};
+
+const buildDeterministicResult = (contractText: string, documentName: string): AnalysisResult => {
+  const sections = extractSections(contractText).slice(0, 12);
+  const clauses = sections.map((section, i) => {
+    const riskLevel = detectRiskLevel(section.clause);
+    const agent = detectAgent(section.clause);
+    return {
+      id: `clause-${i + 1}`,
+      section: section.section,
+      agent,
+      riskLevel,
+      confidence: riskLevel === 'HIGH' ? 72 : riskLevel === 'MEDIUM' ? 64 : 55,
+      originalClause: section.clause,
+      riskReason: riskLevel === 'LOW'
+        ? 'NO SIGNIFICANT CLAUSE DETECTED'
+        : 'Potential risk detected based on explicit clause language.',
+      simpleExplanation: riskLevel === 'LOW'
+        ? 'No major risks detected in this clause.'
+        : 'This clause could affect your rights based on the exact wording.',
+      negotiationAdvice: riskLevel === 'LOW'
+        ? 'No changes suggested.'
+        : 'Consider clarifying or narrowing this clause during negotiation.',
+      sourceGrounded: true,
+    };
+  }).filter(c => c.originalClause);
+
+  const overallRiskScore = computeOverallRisk(clauses);
+  const verdict = computeVerdict(overallRiskScore);
+  const trustMetrics = computeTrustMetrics(clauses);
+  const radarScores = computeRadarScores(clauses);
+  const agentResults = computeAgentResults(clauses);
+  const consequences = clauses.filter(c => c.riskLevel !== 'LOW').slice(0, 3).map(c => c.riskReason);
+
+  return {
+    overallRiskScore,
+    verdict,
+    summary: buildSummary(clauses),
+    documentName,
+    analyzedAt: new Date().toISOString(),
+    clauses,
+    agentResults,
+    consequences,
+    trustMetrics,
+    radarScores,
+  };
+};
+
 const extractPdfText = async (buffer: Buffer) => {
   const pdfParseModule = await import('pdf-parse');
   const pdfParse = (pdfParseModule as unknown as { default?: unknown }).default ?? pdfParseModule;
@@ -198,12 +276,8 @@ export async function POST(request: NextRequest) {
 
     // Check for Gemini API key
     if (!process.env.GEMINI_API_KEY) {
-      console.log('No GEMINI_API_KEY found, using mock data');
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.log('No GEMINI_API_KEY found, using deterministic fallback');
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
