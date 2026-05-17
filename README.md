@@ -236,19 +236,6 @@ Floating chat panel with contextual AI responses about the uploaded contract
 
 ---
 
-## 👥 Team HVKR
-
-Built for **PromptXWars Hackathon** by **Scaler School of Technology**
-
-| Member | Role |
-|--------|------|
-| **H** | Development |
-| **V** | Development |
-| **K** | Development |
-| **R** | Development |
-
----
-
 ## 🏗️ Built With
 
 - [Next.js](https://nextjs.org/) — React framework
