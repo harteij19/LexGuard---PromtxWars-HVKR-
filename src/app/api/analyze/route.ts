@@ -121,8 +121,10 @@ const buildSummary = (clauses: { riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' }[]) => {
 
 const extractPdfText = async (buffer: Buffer) => {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  pdfjs.GlobalWorkerOptions.workerSrc = '';
-  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer), disableWorker: true });
+  (pdfjs as { GlobalWorkerOptions?: { workerSrc?: string } }).GlobalWorkerOptions =
+    (pdfjs as { GlobalWorkerOptions?: { workerSrc?: string } }).GlobalWorkerOptions || {};
+  (pdfjs as { GlobalWorkerOptions?: { workerSrc?: string } }).GlobalWorkerOptions!.workerSrc = '';
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
   const doc = await loadingTask.promise;
   let text = '';
 
