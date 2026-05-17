@@ -132,7 +132,7 @@ const extractPdfText = async (buffer: Buffer) => {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     const pageText = content.items
-      .map((item: { str?: string }) => item.str || '')
+      .map((item) => ('str' in item && typeof item.str === 'string' ? item.str : ''))
       .join(' ');
     text += `${pageText}\n`;
     page.cleanup();
