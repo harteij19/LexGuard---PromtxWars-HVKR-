@@ -6,6 +6,28 @@ export const mockAnalysis: AnalysisResult = {
   summary: 'This employment contract contains several concerning clauses that could limit your rights and financial interests. While the base terms are standard, key areas around termination, IP assignment, and non-compete deserve careful review before signing.',
   documentName: 'Employment_Agreement_2024.pdf',
   analyzedAt: new Date().toISOString(),
+  consequences: [
+    'Employer may terminate your position without any notice or explanation',
+    'All personal side projects and inventions could become company property',
+    'You may be unable to work in your industry for 2 years after leaving',
+    'Your personal devices and communications may be monitored',
+    'Your salary could be reduced at any time with just 14 days notice',
+    'You waive your right to take legal disputes to court',
+  ],
+  trustMetrics: {
+    transparency: 35,
+    fairness: 28,
+    readability: 42,
+    userSafety: 31,
+  },
+  radarScores: {
+    financialRisk: 58,
+    privacyRisk: 65,
+    hiddenLiability: 72,
+    terminationRisk: 82,
+    dataExploitation: 60,
+    ambiguityScore: 48,
+  },
   clauses: [
     {
       risk: 'HIGH',

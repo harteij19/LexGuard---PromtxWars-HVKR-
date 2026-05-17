@@ -1,0 +1,33 @@
+EMPLOYMENT AGREEMENT
+
+This Employment Agreement ("Agreement") is made effective as of January 1, 2026, by and between InnoTech Solutions Inc., a Delaware corporation ("Company"), and John Doe ("Employee").
+
+1. POSITION AND DUTIES
+The Company hereby employs Employee as Senior Software Engineer. Employee agrees to perform all duties assigned by the Company. The Company reserves the right to reassign Employee to any other role, location, or department at its sole discretion, without notice.
+
+2. COMPENSATION
+Employee will receive a base salary of $120,000 per year. The Company may reduce the base salary at any time due to business conditions without prior consent from the Employee.
+
+3. AT-WILL EMPLOYMENT; TERMINATION
+Employment is "at-will." The Company may terminate Employee's employment at any time, for any reason or no reason, without prior notice. Upon termination, Employee waives any right to severance pay.
+
+4. NON-COMPETITION
+For a period of 24 months following the termination of employment, Employee shall not, directly or indirectly, engage in or work for any business that competes with the Company within a 200-mile radius.
+
+5. INTELLECTUAL PROPERTY
+Employee agrees that all intellectual property, inventions, and software developed by Employee during the term of employment, including those developed entirely on Employee's personal time and using personal equipment, shall become the exclusive property of the Company.
+
+6. PRIVACY AND MONITORING
+Employee acknowledges that the Company has the right to monitor, intercept, and review all communications and activities on Company devices. Furthermore, the Company reserves the right to monitor Employee's personal devices if used for any work-related activity, including personal emails and browsing history.
+
+7. MANDATORY ARBITRATION
+Any dispute arising out of or relating to this Agreement shall be resolved by binding arbitration. The Company reserves the exclusive right to select the arbitrator and the venue for arbitration.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement.
+
+InnoTech Solutions Inc.
+By: ___________________________
+Title: CEO
+
+Employee
+By: ___________________________

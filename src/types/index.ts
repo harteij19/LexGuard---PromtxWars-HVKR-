@@ -17,6 +17,9 @@ export interface AnalysisResult {
   documentName: string;
   analyzedAt: string;
   agentResults: AgentResult[];
+  consequences: string[];
+  trustMetrics: TrustMetrics;
+  radarScores: RadarScores;
 }
 
 export interface AgentResult {
@@ -27,15 +30,25 @@ export interface AgentResult {
   icon: string;
 }
 
+export interface TrustMetrics {
+  transparency: number;
+  fairness: number;
+  readability: number;
+  userSafety: number;
+}
+
+export interface RadarScores {
+  financialRisk: number;
+  privacyRisk: number;
+  hiddenLiability: number;
+  terminationRisk: number;
+  dataExploitation: number;
+  ambiguityScore: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-}
-
-export interface ProcessingStage {
-  label: string;
-  status: 'pending' | 'active' | 'complete';
-  icon: string;
 }

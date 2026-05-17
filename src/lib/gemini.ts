@@ -3,17 +3,17 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function analyzeContract(contractText: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ 
+    model: 'gemini-1.5-flash',
+    generationConfig: {
+      temperature: 0.1, // Highly deterministic for maximum accuracy
+      topP: 0.8,
+      topK: 40,
+    }
+  });
 
-  const prompt = `You are LEXGUARD, an advanced AI contract intelligence system composed of 5 specialized agents:
-
-1. **Legal Risk Agent** - Identifies exploitative clauses, one-sided obligations, ambiguous language, and terms that could be legally harmful.
-2. **Financial Risk Agent** - Detects hidden fees, financial liabilities, penalty clauses, cost escalation terms, and financial traps.
-3. **Privacy Agent** - Analyzes data collection, sharing, surveillance, consent, and privacy policy concerns.
-4. **Employment Risk Agent** - Reviews employment terms, termination clauses, non-compete agreements, intellectual property assignments, and worker rights.
-5. **Simplifier Agent** - Translates all findings into plain, simple English that anyone can understand.
-
-Analyze the following contract/document text and provide a comprehensive risk assessment.
+  const prompt = `You are LEXGUARD, an elite, highly precise AI contract intelligence system used by top-tier law firms.
+Your objective is to provide a 100% accurate, flawless legal risk analysis of the provided document.
 
 DOCUMENT TEXT:
 ---
@@ -22,58 +22,52 @@ ${contractText}
 
 You MUST respond with ONLY valid JSON (no markdown, no code blocks, no explanation outside JSON) in this exact format:
 {
-  "overallRisk": <number 0-100>,
+  "overallRisk": <number 0-100, calculated strictly based on sum of risks>,
   "verdict": "<SAFE|CAUTION|DANGEROUS>",
-  "summary": "<2-3 sentence summary of overall document risk>",
+  "summary": "<2-3 sentence executive summary of critical liabilities>",
   "clauses": [
     {
       "risk": "<HIGH|MEDIUM|LOW>",
       "title": "<short descriptive title>",
-      "clause": "<exact clause text from document>",
-      "explanation": "<detailed legal explanation of why this is risky>",
-      "simpleExplanation": "<plain English explanation a teenager could understand>",
-      "suggestion": "<actionable negotiation suggestion>",
-      "agentSource": "<which agent found this: Legal|Financial|Privacy|Employment>",
-      "confidence": <number 70-99>
+      "clause": "<EXACT QUOTE from the document text - MUST be verbatim>",
+      "explanation": "<detailed, legally accurate explanation of the risk>",
+      "simpleExplanation": "<plain English translation without jargon>",
+      "suggestion": "<highly actionable, specific negotiation tactic>",
+      "agentSource": "<Legal|Financial|Privacy|Employment>",
+      "confidence": <number 90-99, representing certainty of risk>
     }
   ],
   "agentResults": [
-    {
-      "agentName": "Legal Risk Agent",
-      "riskScore": <number 0-100>,
-      "findings": <number of findings>
-    },
-    {
-      "agentName": "Financial Risk Agent",
-      "riskScore": <number 0-100>,
-      "findings": <number of findings>
-    },
-    {
-      "agentName": "Privacy Agent",
-      "riskScore": <number 0-100>,
-      "findings": <number of findings>
-    },
-    {
-      "agentName": "Employment Risk Agent",
-      "riskScore": <number 0-100>,
-      "findings": <number of findings>
-    },
-    {
-      "agentName": "Simplifier Agent",
-      "riskScore": 0,
-      "findings": <total number of simplified explanations>
-    }
-  ]
+    { "agentName": "Legal Risk Agent", "riskScore": <0-100>, "findings": <number> },
+    { "agentName": "Financial Risk Agent", "riskScore": <0-100>, "findings": <number> },
+    { "agentName": "Privacy Agent", "riskScore": <0-100>, "findings": <number> },
+    { "agentName": "Employment Risk Agent", "riskScore": <0-100>, "findings": <number> },
+    { "agentName": "Simplifier Agent", "riskScore": 0, "findings": <number> }
+  ],
+  "consequences": [
+    "<specific worst-case scenario 1 if signed>",
+    "<specific worst-case scenario 2 if signed>"
+  ],
+  "trustMetrics": {
+    "transparency": <0-100>,
+    "fairness": <0-100>,
+    "readability": <0-100>,
+    "userSafety": <0-100>
+  },
+  "radarScores": {
+    "financialRisk": <0-100>,
+    "privacyRisk": <0-100>,
+    "hiddenLiability": <0-100>,
+    "terminationRisk": <0-100>,
+    "dataExploitation": <0-100>,
+    "ambiguityScore": <0-100>
+  }
 }
 
-IMPORTANT RULES:
-- Find AT LEAST 5-8 clauses to analyze (more if the document is long)
-- Mix of HIGH, MEDIUM, and LOW risk findings
-- Be thorough and realistic
-- Simple explanations should be conversational and easy to understand
-- Suggestions should be specific and actionable
-- Overall risk score: 0-30 = SAFE, 31-60 = CAUTION, 61-100 = DANGEROUS
-- Return ONLY valid JSON, nothing else`;
+CRITICAL INSTRUCTIONS FOR MAXIMUM ACCURACY:
+1. NO HALLUCINATIONS: Every "clause" MUST be an exact, verifiable verbatim quote from the provided text.
+2. PRECISION SCORING: Calculate "overallRisk" and "radarScores" using logical deduction based purely on the text severity. 
+3. Do NOT output anything other than raw, valid JSON.`;
 
   const result = await model.generateContent(prompt);
   const response = result.response;
@@ -81,28 +75,34 @@ IMPORTANT RULES:
 }
 
 export async function chatAboutContract(contractText: string, question: string, chatHistory: { role: string; content: string }[]): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ 
+    model: 'gemini-1.5-flash',
+    generationConfig: { temperature: 0.2 } // High precision for chat
+  });
 
   const historyContext = chatHistory
     .slice(-6)
     .map(msg => `${msg.role === 'user' ? 'User' : 'LEXGUARD'}: ${msg.content}`)
     .join('\n');
 
-  const prompt = `You are LEXGUARD AI Assistant, a friendly and expert AI legal advisor. You are helping a user understand their contract/document.
+  const prompt = `You are LEXGUARD AI, an elite legal advisor. 
+You provide extremely precise, accurate, and professional advice based ONLY on the provided document.
 
-DOCUMENT BEING DISCUSSED:
+DOCUMENT:
 ---
 ${contractText}
 ---
 
-CONVERSATION HISTORY:
+HISTORY:
 ${historyContext}
 
-USER'S QUESTION: ${question}
+QUESTION: ${question}
 
-Respond in a helpful, clear, and conversational tone. Use simple language. If the question relates to something in the document, reference specific parts. Keep responses concise but thorough. If you identify risks, explain them clearly and suggest alternatives.
-
-Do NOT use markdown formatting. Use plain text with line breaks for readability.`;
+RULES:
+- Be extremely precise. If a clause exists, quote it verbatim.
+- Do not hallucinate legal terms not present in the document.
+- Be concise, professional, and brutally honest about risks.
+- Do NOT use markdown formatting. Use plain text.`;
 
   const result = await model.generateContent(prompt);
   const response = result.response;

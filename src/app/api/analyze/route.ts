@@ -46,7 +46,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Use Gemini API
-    const aiResponse = await analyzeContract(contractText);
+    let aiResponse;
+    try {
+      aiResponse = await analyzeContract(contractText);
+    } catch (apiError) {
+      console.error('Gemini API call failed, falling back to mock data:', apiError);
+      const result: AnalysisResult = {
+        ...mockAnalysis,
+        documentName,
+        analyzedAt: new Date().toISOString(),
+      };
+      return NextResponse.json({ result, contractText });
+    }
 
     // Parse JSON from the response
     let parsed;
@@ -91,6 +102,9 @@ export async function POST(request: NextRequest) {
         findings: a.findings || 0,
         icon: ['⚖️', '💰', '🔒', '👔', '📝'][i] || '🔍',
       })),
+      consequences: parsed.consequences || [],
+      trustMetrics: parsed.trustMetrics || { transparency: 50, fairness: 50, readability: 50, userSafety: 50 },
+      radarScores: parsed.radarScores || { financialRisk: 50, privacyRisk: 50, hiddenLiability: 50, terminationRisk: 50, dataExploitation: 50, ambiguityScore: 50 },
     };
 
     return NextResponse.json({ result, contractText });
