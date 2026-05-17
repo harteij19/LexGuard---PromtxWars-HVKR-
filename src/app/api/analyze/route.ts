@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequire } from 'node:module';
 import { analyzeContract } from '@/lib/gemini';
 import type { AnalysisResult } from '@/types';
 
 export const runtime = 'nodejs';
+
+const require = createRequire(import.meta.url);
 
 const riskWeights = {
   HIGH: 80,
@@ -198,11 +201,7 @@ const buildDeterministicResult = (contractText: string, documentName: string): A
 };
 
 const extractPdfText = async (buffer: Buffer) => {
-  const pdfParseModule = await import('pdf-parse');
-  const pdfParse = (pdfParseModule as unknown as { default?: unknown }).default ?? pdfParseModule;
-  if (typeof pdfParse !== 'function') {
-    throw new TypeError('pdf-parse module did not export a function');
-  }
+  const pdfParse = require('pdf-parse') as (dataBuffer: Buffer) => Promise<{ text?: string }>;
   const pdfData = await pdfParse(buffer);
   return pdfData?.text || '';
 };
@@ -286,12 +285,8 @@ export async function POST(request: NextRequest) {
     try {
       aiResponse = await analyzeContract(contractText);
     } catch (apiError) {
-      console.error('Gemini API call failed, falling back to mock data:', apiError);
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.error('Gemini API call failed, falling back to deterministic data:', apiError);
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
@@ -306,12 +301,8 @@ export async function POST(request: NextRequest) {
         parsed = JSON.parse(aiResponse);
       }
     } catch {
-      console.error('Failed to parse AI response, using mock data');
-      const result: AnalysisResult = {
-        ...mockAnalysis,
-        documentName,
-        analyzedAt: new Date().toISOString(),
-      };
+      console.error('Failed to parse AI response, using deterministic data');
+      const result = buildDeterministicResult(contractText, documentName);
       return NextResponse.json({ result, contractText });
     }
 
